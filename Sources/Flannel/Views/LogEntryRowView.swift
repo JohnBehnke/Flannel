@@ -9,16 +9,20 @@ import SwiftUI
 
 struct LogEntryRowView: View {
     @Environment(\.horizontalSizeClass) var sizeClass
-    let entry: FlannelLogEntry
-    let metadataVisibility: MetadataOptionVisibilityStore
+    
     @State private var showPIDTIDPopover: Bool = false
     @State private var showTypePopover: Bool = false
 //    @State private var logTypePopover: LogTypePopoverModel?
+    
+    let entry: FlannelLogEntry
+    let metadataVisibility: MetadataOptionVisibilityStore
+    let searchText: String
+    
     var body: some View {
         HStack {
             VStack(spacing: 12) {
                 
-                Text(entry.message)
+                Text(entry.message.searchResults(for: searchText))
                     .fontWeight(.bold)
                     .foregroundStyle(.gray)
                     .multilineTextAlignment(.leading)
@@ -29,7 +33,7 @@ struct LogEntryRowView: View {
                     HStack {
                         if metadataVisibility.showType {
                             Button {
-                                                                showTypePopover.toggle()
+                                showTypePopover.toggle()
 //                                logTypePopover = LogTypePopoverModel(message: entry.level.rawValue.capitalized)
                             } label: {
                                 Image(systemName: entry.symbol)
@@ -152,5 +156,5 @@ struct LogEntryRowView: View {
 }
 
 #Preview {
-    LogEntryRowView(entry: .mockFlannelEntry, metadataVisibility: MetadataOptionVisibilityStore())
+    LogEntryRowView(entry: .mockFlannelEntry, metadataVisibility: MetadataOptionVisibilityStore(), searchText: "")
 }

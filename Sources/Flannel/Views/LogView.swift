@@ -13,16 +13,16 @@ public struct LogView: View {
     @State private var fetchingLogs: Bool = false
     @State private var lastFetchTime: Date = .now
     
-
+    
     let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "View")
     
     private var searchResults: [FlannelLogEntry] {
         if searchText.isEmpty {
             return logs.filter { logTypeVisibilityStore.logTypes[$0.level] ?? false }
         } else {
-            return logs.filter { 
-                $0.message.lowercased().contains(searchText)
-                && logTypeVisibilityStore.logTypes[$0.level]!}
+            return logs.filter {
+                $0.message.lowercased().contains(searchText.lowercased())
+                && logTypeVisibilityStore.logTypes[$0.level] ?? false}
         }
     }
     
@@ -44,12 +44,16 @@ public struct LogView: View {
             }
             
             List (searchResults) { log in
-                LogEntryRowView(entry: log, metadataVisibility: metadataVisibilityStore)
-                    .listRowBackground(
-                        metadataVisibilityStore.showMetadata
-                        ? log.color.opacity(0.1)
-                        : nil
-                    )
+                LogEntryRowView(
+                    entry: log,
+                    metadataVisibility: metadataVisibilityStore,
+                    searchText: searchText
+                )
+                .listRowBackground(
+                    metadataVisibilityStore.showMetadata
+                    ? log.color.opacity(0.1)
+                    : nil
+                )
                 
             }
             .listStyle(.plain)
@@ -124,3 +128,19 @@ public struct LogView: View {
     }
 }
 
+
+
+extension String {
+    var markdown: AttributedString {
+        try! AttributedString(markdown: self, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+    }
+    func searchResults(for searchString: String) -> AttributedString {
+        var markdown = self.markdown
+        guard let rangeOfBold = markdown.range(of: searchString.lowercased()) else {
+            return markdown
+        }
+        markdown[rangeOfBold].font = .body.bold()
+        markdown[rangeOfBold].backgroundColor = .yellow.opacity(0.5)
+        return markdown
+    }
+}
