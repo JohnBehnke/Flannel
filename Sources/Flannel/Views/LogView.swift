@@ -1,5 +1,6 @@
 import SwiftUI
 import OSLog
+import UniformTypeIdentifiers
 
 public struct LogView: View {
     
@@ -12,6 +13,7 @@ public struct LogView: View {
     @State private var errorMessage: String = ""
     @State private var fetchingLogs: Bool = false
     @State private var lastFetchTime: Date = .now
+    @State private var showExport: Bool = false
     
     
     let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "View")
@@ -63,13 +65,31 @@ public struct LogView: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .bottomBar) {
-                    Button {} label: {
+                    Button {
+                        showExport.toggle()
+                    } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
-                    Spacer()
+                    .disabled(logs.isEmpty)
+                    Menu {
+                        FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
+                    } label: {
+                        Image(systemName:
+                                logTypeVisibilityStore.logTypes.values.contains(false)
+                              ? "line.3.horizontal.decrease.circle.fill"
+                              :"line.3.horizontal.decrease.circle"
+                        )
+                    }
+                    .disabled(logs.isEmpty)
+                    .menuActionDismissBehavior(.disabled)
                     
-                    FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
-                    MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
+                    Menu {
+                        MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
+                    } label: {
+                        Image(systemName: "switch.2")
+                    }
+                    .disabled(logs.isEmpty)
+                    .menuActionDismissBehavior(.disabled)
                     
                     
                 }
@@ -94,7 +114,19 @@ public struct LogView: View {
                 fetchingLogs = false
             }
         }
-        
+        .fileExporter(
+            isPresented: $showExport,
+            document: TextDocument(text: logs.map { $0.message }.joined(separator: "\n")),
+            contentType: .plainText,
+            defaultFilename: "\(Date.now.formatted(.iso8601.dateSeparator(.dash).timeSeparator(.colon)))-\(Bundle.main.bundleIdentifier!)"
+        ) { result in
+            switch result {
+            case .success(let file):
+                print(file)
+            case .failure(let error):
+                print(error)
+            }
+        }
     }
     
     
@@ -139,8 +171,44 @@ extension String {
         guard let rangeOfBold = markdown.range(of: searchString.lowercased()) else {
             return markdown
         }
-        markdown[rangeOfBold].font = .body.bold()
         markdown[rangeOfBold].backgroundColor = .yellow.opacity(0.5)
         return markdown
+    }
+}
+
+struct ShareView: UIViewControllerRepresentable {
+    typealias UIViewControllerType = UIActivityViewController
+    
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+    }
+}
+
+struct TextDocument: FileDocument {
+    static var readableContentTypes: [UTType] {
+        [.log, .plainText]
+    }
+    
+    var text = ""
+    
+    init(text: String) {
+        self.text = text
+    }
+    
+    init(configuration: ReadConfiguration) throws {
+        if let data = configuration.file.regularFileContents {
+            text = String(decoding: data, as: UTF8.self)
+        } else {
+            text = ""
+        }
+    }
+    
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: Data(text.utf8))
     }
 }

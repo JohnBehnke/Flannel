@@ -18,7 +18,7 @@ struct FilterOptionsView: View {
     @State private var showFault: Bool = true
     
     var body: some View {
-        Menu {
+            
             Toggle(isOn: $showInfo, label: {
                 Text("Info")
             }).onChange(of: showInfo) { _, newValue in
@@ -44,16 +44,7 @@ struct FilterOptionsView: View {
             }).onChange(of: showFault) { _, newValue in
                 logTypeVisibilityStore.logTypes[.fault] = newValue
             }
-        } label: {
-            Image(systemName: 
-                    logTypeVisibilityStore.logTypes.values.contains(false)
-                      ? "line.3.horizontal.decrease.circle.fill"
-                      :"line.3.horizontal.decrease.circle"
-            )
-            
-            //
-        }
-        .menuActionDismissBehavior(.disabled)
+        
     }
 }
 
