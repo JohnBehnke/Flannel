@@ -3,25 +3,36 @@ import OSLog
 
 public struct LogView: View {
     
+    @State private var metadataVisibilityStore: MetadataOptionVisibilityStore = MetadataOptionVisibilityStore()
+    @State private var logTypeVisibilityStore: LogTypeVisibilityStore = LogTypeVisibilityStore()
+    
     @State private var searchText: String = ""
     @State private var logs: [FlannelLogEntry] = []
     @State private var attemptedLoad: Bool = true
     @State private var errorMessage: String = ""
     @State private var fetchingLogs: Bool = false
     @State private var lastFetchTime: Date = .now
+    
+
     let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "View")
     
     private var searchResults: [FlannelLogEntry] {
         if searchText.isEmpty {
-            return logs
+            return logs.filter { logTypeVisibilityStore.logTypes[$0.level] ?? false }
         } else {
-            return logs.filter { $0.message.lowercased().contains(searchText) }
+            return logs.filter { 
+                $0.message.lowercased().contains(searchText)
+                && logTypeVisibilityStore.logTypes[$0.level]!}
         }
     }
     
     public init() {
-        logger.error("My Error Message")
-
+        logger.debug("Debug log message")
+        logger.info("Info log message")
+        logger.notice("Notice log message")
+        logger.error("Error log message")
+        logger.fault("Fault log")
+        
     }
     public var body: some View {
         Group {
@@ -33,14 +44,18 @@ public struct LogView: View {
             }
             
             List (searchResults) { log in
-                Text("Hello World")
+                LogEntryRowView(entry: log, metadataVisibility: metadataVisibilityStore)
+                    .listRowBackground(
+                        metadataVisibilityStore.showMetadata
+                        ? log.color.opacity(0.1)
+                        : nil
+                    )
+                
             }
             .listStyle(.plain)
             .searchable(text: $searchText)
             .refreshable {
-                
                 await fetchLogs()
-                
             }
             .toolbar {
                 ToolbarItemGroup(placement: .bottomBar) {
@@ -48,22 +63,10 @@ public struct LogView: View {
                         Image(systemName: "square.and.arrow.up")
                     }
                     Spacer()
-                    Menu {
-                        Text("Filter item 1")
-                        Text("Filter item 2")
-                        Text("Filter item 3")
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                    }
-                    .menuActionDismissBehavior(.disabled)
-                    Menu {
-                        Text("Metadata option 1")
-                        Text("Metadata option 2")
-                        Text("Metadata option 3")
-                    } label: {
-                        Image(systemName: "switch.2")
-                    }
-                    .menuActionDismissBehavior(.disabled)
+                    
+                    FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
+                    MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
+                    
                     
                 }
                 ToolbarItemGroup(placement: .status) {
@@ -108,9 +111,6 @@ public struct LogView: View {
                     return FlannelLogEntry(date: $0.date, category: $0.category, message: $0.formatString, subsytem: $0.subsystem, processId: Int($0.processIdentifier), threadId: ($0.threadIdentifier), library: $0.sender, processName: $0.process, level: FlannelLogLevel(rawLevel: $0.level.rawValue) ?? .unknown)
                 }
             }
-            
-            
-            
         } catch {
             print(error.localizedDescription)
         }
@@ -123,3 +123,4 @@ public struct LogView: View {
             .navigationTitle("Logs")
     }
 }
+

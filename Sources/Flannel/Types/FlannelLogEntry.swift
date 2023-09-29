@@ -53,3 +53,9 @@ struct FlannelLogEntry: Identifiable {
         }
     }
 }
+
+extension FlannelLogEntry {
+    static var mockFlannelEntry: FlannelLogEntry {
+        return FlannelLogEntry(date: .now, category: "Category", message: "Message", subsytem: "Subsystem", processId: 69420, threadId: 0xdeadb33f, library: "Library", processName: "Process Name", level: .info)
+    }
+}
