@@ -9,22 +9,22 @@ import SwiftUI
 
 struct LogEntryRowView: View {
     @Environment(\.horizontalSizeClass) var sizeClass
-    
+    @Environment(\.colorScheme) var colorScheme
     @State private var showPIDTIDPopover: Bool = false
     @State private var showTypePopover: Bool = false
-//    @State private var logTypePopover: LogTypePopoverModel?
-    
+
     let entry: FlannelLogEntry
     let metadataVisibility: MetadataOptionVisibilityStore
-    let searchText: String
     
     var body: some View {
         HStack {
             VStack(spacing: 12) {
                 
-                Text(entry.message.searchResults(for: searchText))
+                #warning("Not sure on this color yet...")
+                Text(entry.message)
                     .fontWeight(.bold)
-                    .foregroundStyle(.gray)
+               
+                    .foregroundStyle(colorScheme == .light ? .gray : .white)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .lineLimit(3)
@@ -34,39 +34,30 @@ struct LogEntryRowView: View {
                         if metadataVisibility.showType {
                             Button {
                                 showTypePopover.toggle()
-//                                logTypePopover = LogTypePopoverModel(message: entry.level.rawValue.capitalized)
                             } label: {
                                 Image(systemName: entry.symbol)
                                     .resizable()
+                                    .scaledToFit()
                                     .frame(width: 8, height: 8)
                                     .padding(3)
                                     .font(.caption2)
                                     .foregroundColor(.white)
-                                    .background(entry.color)
+                                    .background(entry.symbolColor)
                                     .clipShape(.rect(cornerRadius: 2))
                             }
-                            //                            LogTypeView(entry: entry)
-                            //                            .popover(isPresented: $showTypePopover){
-                            //
-                            //                                if sizeClass == .compact {
-                            //                                    LogTypeView(entry: entry)
-                            //                                        .presentationDetents([.fraction(0.2)])
-                            //                                        .presentationDragIndicator(.visible)
-                            //                                } else {
-                            //                                    LogTypeView(entry: entry)
-                            //                                        .frame(width: 300, height: 100)
-                            //                                }
-                            //
-                            //                            }
-//                            .popover(item: $logTypePopover){ detail in
-//                                Form {
-//                                    Section("Type") {
-//                                        Text(detail.message)
-//                                    }
-//                                }
-//                                .frame(width: 300, height: 100)
-//                                
-//                            }
+                            
+                            .popover(isPresented: $showTypePopover){
+                                
+                                if sizeClass == .compact {
+                                    LogTypeView(entry: entry)
+                                        .presentationDetents([.fraction(0.2)])
+                                        .presentationDragIndicator(.visible)
+                                } else {
+                                    LogTypeView(entry: entry)
+                                        .frame(width: 300, height: 100)
+                                }
+                                
+                            }
                             
                         }
                         
@@ -113,14 +104,14 @@ struct LogEntryRowView: View {
                                     .foregroundStyle(.tertiary)
                                     .popover(isPresented: $showPIDTIDPopover){
                                         
-//                                        if sizeClass == .compact {
-//                                            PIDTIDView(entry: entry)
-//                                                .presentationDetents([.fraction(0.3)])
-//                                                .presentationDragIndicator(.visible)
-//                                        } else {
-//                                            PIDTIDView(entry: entry)
-//                                                .frame(width: 300, height: 200)
-//                                        }
+                                        if sizeClass == .compact {
+                                            PIDTIDView(entry: entry)
+                                                .presentationDetents([.fraction(0.3)])
+                                                .presentationDragIndicator(.visible)
+                                        } else {
+                                            PIDTIDView(entry: entry)
+                                                .frame(width: 300, height: 200)
+                                        }
                                         
                                     }
                                     
@@ -147,14 +138,27 @@ struct LogEntryRowView: View {
                                 }
                             }
                         }
+
                     }
                     
                 }
             }
         }
+        .listRowBackground(
+            metadataVisibility.showMetadata
+            ? entry.rowColor.opacity(0.2)
+            : nil
+        )
     }
 }
 
 #Preview {
-    LogEntryRowView(entry: .mockFlannelEntry, metadataVisibility: MetadataOptionVisibilityStore(), searchText: "")
+    List(FlannelLogEntry.mockFlannelEntries) { entry in
+        LogEntryRowView(
+            entry: entry,
+            metadataVisibility: MetadataOptionVisibilityStore()
+        )
+        
+    }
+    .listStyle(.plain)
 }

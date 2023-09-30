@@ -1,6 +1,6 @@
 import SwiftUI
 import OSLog
-import UniformTypeIdentifiers
+
 
 public struct LogView: View {
     
@@ -48,13 +48,7 @@ public struct LogView: View {
             List (searchResults) { log in
                 LogEntryRowView(
                     entry: log,
-                    metadataVisibility: metadataVisibilityStore,
-                    searchText: searchText
-                )
-                .listRowBackground(
-                    metadataVisibilityStore.showMetadata
-                    ? log.color.opacity(0.1)
-                    : nil
+                    metadataVisibility: metadataVisibilityStore
                 )
                 
             }
@@ -161,54 +155,3 @@ public struct LogView: View {
 }
 
 
-
-extension String {
-    var markdown: AttributedString {
-        try! AttributedString(markdown: self, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))
-    }
-    func searchResults(for searchString: String) -> AttributedString {
-        var markdown = self.markdown
-        guard let rangeOfBold = markdown.range(of: searchString.lowercased()) else {
-            return markdown
-        }
-        markdown[rangeOfBold].backgroundColor = .yellow.opacity(0.5)
-        return markdown
-    }
-}
-
-struct ShareView: UIViewControllerRepresentable {
-    typealias UIViewControllerType = UIActivityViewController
-    
-    let items: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
-    }
-}
-
-struct TextDocument: FileDocument {
-    static var readableContentTypes: [UTType] {
-        [.log, .plainText]
-    }
-    
-    var text = ""
-    
-    init(text: String) {
-        self.text = text
-    }
-    
-    init(configuration: ReadConfiguration) throws {
-        if let data = configuration.file.regularFileContents {
-            text = String(decoding: data, as: UTF8.self)
-        } else {
-            text = ""
-        }
-    }
-    
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: Data(text.utf8))
-    }
-}

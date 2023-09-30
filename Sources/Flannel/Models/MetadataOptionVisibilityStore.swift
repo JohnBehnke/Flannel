@@ -13,8 +13,8 @@ class MetadataOptionVisibilityStore {
     var showTimestamp: Bool = true
     var showType: Bool = true
     var showLibrary: Bool = true
-    var showPIDTID: Bool = true
+    var showPIDTID: Bool = false
     var showSubsystem: Bool = true
     var showCategory: Bool = true
-    var showProcessName: Bool = true
+    var showProcessName: Bool = false
 }

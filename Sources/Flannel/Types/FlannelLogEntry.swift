@@ -19,7 +19,20 @@ struct FlannelLogEntry: Identifiable {
     let library: String
     let processName: String
     let level: FlannelLogLevel
-    var color: Color {
+    var rowColor: Color {
+        switch level {
+        case .unknown, .debug, .notice:
+            return .clear
+        case .info:
+            return .blue
+        case .error:
+            return .yellow
+        case .fault:
+            return .red
+        }
+    }
+    
+    var symbolColor: Color {
         switch level {
         case .unknown:
             return .gray
@@ -35,6 +48,7 @@ struct FlannelLogEntry: Identifiable {
             return .red
         }
     }
+    
     
     var symbol: String {
         switch level {
@@ -55,7 +69,12 @@ struct FlannelLogEntry: Identifiable {
 }
 
 extension FlannelLogEntry {
-    static var mockFlannelEntry: FlannelLogEntry {
-        return FlannelLogEntry(date: .now, category: "Category", message: "Message", subsytem: "Subsystem", processId: 69420, threadId: 0xdeadb33f, library: "Library", processName: "Process Name", level: .info)
+    static var mockFlannelEntries: [FlannelLogEntry] {
+        return [FlannelLogEntry(date: .now, category: "Category", message: "Info message", subsytem: "Subsystem", processId: 69420, threadId: 0xdeadb33f, library: "Library", processName: "Process Name", level: .info),
+                FlannelLogEntry(date: .now, category: "Category", message: "Debug message", subsytem: "Subsystem", processId: 69420, threadId: 0xdeadb33f, library: "Library", processName: "Process Name", level: .debug),
+                FlannelLogEntry(date: .now, category: "Category", message: "Notice message", subsytem: "Subsystem", processId: 69420, threadId: 0xdeadb33f, library: "Library", processName: "Process Name", level: .notice),
+                FlannelLogEntry(date: .now, category: "Category", message: "Error message", subsytem: "Subsystem", processId: 69420, threadId: 0xdeadb33f, library: "Library", processName: "Process Name", level: .error),
+                FlannelLogEntry(date: .now, category: "Category", message: "Fault message", subsytem: "Subsystem", processId: 69420, threadId: 0xdeadb33f, library: "Library", processName: "Process Name", level: .fault)
+        ]
     }
 }

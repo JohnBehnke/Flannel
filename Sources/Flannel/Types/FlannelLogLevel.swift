@@ -23,13 +23,10 @@ extension FlannelLogLevel {
             self = .debug
         case 2:
             self = .info
-            
         case 3:
             self = .notice
-            
         case 4:
             self = .error
-            
         case 5:
             self = .fault
         default:
