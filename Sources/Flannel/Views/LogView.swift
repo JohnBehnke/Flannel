@@ -89,23 +89,32 @@ public struct LogView: View {
                 }
                 ToolbarItemGroup(placement: .status) {
                     if fetchingLogs {
-                        Text("Fetching Logs...")
-                            .font(.caption)
+                        HStack {
+                            Image(systemName: "magnifyingglass.circle.fill")
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(.blue)
+                                .symbolEffect(.pulse.wholeSymbol)
+                            Text("Fetching Logs...")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        
+                        
                     }
                     else {
                         Text("Last updated: \(lastFetchTime.formatted(date: .omitted, time: .shortened))")
                             .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                     
                 }
+                
             }
             .toolbar(.automatic, for: .bottomBar)
         }
         .onAppear {
             Task {
-                fetchingLogs = true
                 await fetchLogs()
-                fetchingLogs = false
             }
         }
         .fileExporter(
@@ -126,7 +135,7 @@ public struct LogView: View {
     
     func fetchLogs() async {
         do {
-            
+            fetchingLogs = true
             let store = try OSLogStore(scope: .currentProcessIdentifier)
             let predicate = NSPredicate(
                 format: "subsystem = %@",
@@ -138,11 +147,13 @@ public struct LogView: View {
             
             DispatchQueue.main.async {
                 self.logs = newEntries.map {
+                    fetchingLogs = false
                     return FlannelLogEntry(date: $0.date, category: $0.category, message: $0.formatString, subsytem: $0.subsystem, processId: Int($0.processIdentifier), threadId: ($0.threadIdentifier), library: $0.sender, processName: $0.process, level: FlannelLogLevel(rawLevel: $0.level.rawValue) ?? .unknown)
                 }
             }
         } catch {
             print(error.localizedDescription)
+            fetchingLogs = false
         }
     }
 }
