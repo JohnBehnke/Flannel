@@ -64,7 +64,8 @@ struct LogEntryRowView: View {
                         ScrollView(.horizontal, showsIndicators: false){
                             HStack {
                                 if metadataVisibility.showTimestamp {
-                                    Text(entry.date.formatted(date: .omitted, time: .complete))
+                                    
+                                    Text(dateFormatter.string(from: entry.date))
                                         .fontWeight(.bold)
                                         .font(.caption2)
                                         .foregroundStyle(.tertiary)
@@ -149,6 +150,30 @@ struct LogEntryRowView: View {
             ? entry.rowColor.opacity(0.2)
             : nil
         )
+        .contextMenu {
+            Button("Copy with Visible Metadata", action: {})
+            Button("Copy with All Metadata", action: {})
+            Button("Copy without Metadata", action: {})
+            Divider()
+            Menu("Hide Similar Items") {
+                Button("Type '\(entry.level.rawValue.capitalized)'", action: {})
+                Button("PID '\((entry.processId.formatted(.number.grouping(.never))))'", action: {})
+                Button("Library '\(entry.library)'", action: {})
+                Button("Subsystem '\(entry.subsytem)'", action: {})
+                Button("Category '\(entry.category)'", action: {})
+                Button("TID '\(entry.threadId.formattedString)'", action: {})
+            }
+            Menu("Show Similar Items") {
+               
+            }
+        }
+    }
+    
+    var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSSS"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
     }
 }
 
@@ -162,3 +187,13 @@ struct LogEntryRowView: View {
     }
     .listStyle(.plain)
 }
+
+
+
+
+/*
+ 
+ LOGS!
+ Type: Fault | Timestamp: 2023-09-29 23:03:58.430022-04:00 | Library: Stellae | Subsystem: xyz.behnke.Stellae | Category: StellaeApp | TID: 0x58d67d
+ 
+ */

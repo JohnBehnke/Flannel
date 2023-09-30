@@ -34,6 +34,16 @@ public struct LogView: View {
         logger.notice("Notice log message")
         logger.error("Error log message")
         logger.fault("Fault log")
+        logger.debug("Debug log message")
+        logger.info("Info log message")
+        logger.notice("Notice log message")
+        logger.error("Error log message")
+        logger.fault("Fault log")
+        logger.debug("Debug log message")
+        logger.info("Info log message")
+        logger.notice("Notice log message")
+        logger.error("Error log message")
+        logger.fault("Fault log")
         
     }
     public var body: some View {
@@ -65,17 +75,7 @@ public struct LogView: View {
                         Image(systemName: "square.and.arrow.up")
                     }
                     .disabled(logs.isEmpty)
-                    Menu {
-                        FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
-                    } label: {
-                        Image(systemName:
-                                logTypeVisibilityStore.logTypes.values.contains(false)
-                              ? "line.3.horizontal.decrease.circle.fill"
-                              :"line.3.horizontal.decrease.circle"
-                        )
-                    }
-                    .disabled(logs.isEmpty)
-                    .menuActionDismissBehavior(.disabled)
+                    
                     
                     Menu {
                         MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
@@ -106,6 +106,20 @@ public struct LogView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    
+                }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Menu {
+                        FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
+                    } label: {
+                        Image(systemName:
+                                logTypeVisibilityStore.logTypes.values.contains(false)
+                              ? "line.3.horizontal.decrease.circle.fill"
+                              :"line.3.horizontal.decrease.circle"
+                        )
+                    }
+                    .disabled(logs.isEmpty)
+                    .menuActionDismissBehavior(.disabled)
                     
                 }
                 
@@ -142,7 +156,7 @@ public struct LogView: View {
                 Bundle.main.bundleIdentifier!
             )
             
-            let newEntries = try store.getEntries(matching: predicate)
+            let newEntries = try store.getEntries()
                 .compactMap { $0 as? OSLogEntryLog }
             
             DispatchQueue.main.async {
