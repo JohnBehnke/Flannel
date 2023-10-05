@@ -94,7 +94,21 @@ public struct LogView: View {
                                 .symbolRenderingMode(.hierarchical)
                                 .foregroundStyle(.blue)
                                 .symbolEffect(.pulse.wholeSymbol)
-                            Text("Fetching Logs...")
+                            
+                            HStack(alignment: .bottom,spacing: 0) {
+                                Text("Fetching Logs")
+                                Image(systemName: "ellipsis")
+                                    .symbolEffect(
+                                        .variableColor
+                                        .iterative
+                                        .dimInactiveLayers
+                                        .nonReversing
+                                    )
+                                    .font(.caption2)
+                                    .padding(.bottom, 1)
+                            }
+                               
+                            
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -156,7 +170,7 @@ public struct LogView: View {
                 Bundle.main.bundleIdentifier!
             )
             
-            let newEntries = try store.getEntries()
+            let newEntries = try store.getEntries(matching: predicate)
                 .compactMap { $0 as? OSLogEntryLog }
             
             DispatchQueue.main.async {
@@ -178,5 +192,3 @@ public struct LogView: View {
             .navigationTitle("Logs")
     }
 }
-
-
