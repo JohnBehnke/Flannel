@@ -7,6 +7,7 @@ public struct LogView: View {
     @State private var metadataVisibilityStore: MetadataOptionVisibilityStore = MetadataOptionVisibilityStore()
     @State private var logTypeVisibilityStore: LogTypeVisibilityStore = LogTypeVisibilityStore()
     
+    
     @State private var searchText: String = ""
     @State private var logs: [FlannelLogEntry] = []
     @State private var attemptedLoad: Bool = true
@@ -14,21 +15,27 @@ public struct LogView: View {
     @State private var fetchingLogs: Bool = false
     @State private var lastFetchTime: Date = .now
     @State private var showExport: Bool = false
-    
+    @State private var newestFirst:Bool = true
     
     let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "View")
+    
+    var subsystems: [String]
     
     private var searchResults: [FlannelLogEntry] {
         if searchText.isEmpty {
             return logs.filter { logTypeVisibilityStore.logTypes[$0.level] ?? false }
+                .sorted { newestFirst ? ($0.date > $1.date) : ($0.date < $1.date)  }
         } else {
             return logs.filter {
                 $0.message.lowercased().contains(searchText.lowercased())
-                && logTypeVisibilityStore.logTypes[$0.level] ?? false}
+                && logTypeVisibilityStore.logTypes[$0.level] ?? false }
+            .sorted { $0.date > $1.date }
         }
     }
     
-    public init() {
+    /// A display of logs captured by OSLog
+    /// - Parameter subsystems: An array of bundle indentifiers to filter the OSLogStore by. By default, it will only filter by 'Bundle.main.bundleIdentifier'
+    public init(subsystems: [String] = [Bundle.main.bundleIdentifier!]) {
         logger.debug("Debug log message")
         logger.info("Info log message")
         logger.notice("Notice log message")
@@ -44,6 +51,10 @@ public struct LogView: View {
         logger.notice("Notice log message")
         logger.error("Error log message")
         logger.fault("Fault log")
+        
+
+        self.subsystems = subsystems
+        
         
     }
     public var body: some View {
@@ -69,13 +80,18 @@ public struct LogView: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .bottomBar) {
-                    Button {
-                        showExport.toggle()
+                    Menu {
+                        Toggle(isOn: $newestFirst) {
+                            Text("Newest first")
+                        }
+                        
                     } label: {
-                        Image(systemName: "square.and.arrow.up")
+                        Image(systemName:
+                                "arrow.up.arrow.down"
+                        )
                     }
                     .disabled(logs.isEmpty)
-                    
+                    .menuActionDismissBehavior(.disabled)
                     
                     Menu {
                         MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
@@ -84,6 +100,19 @@ public struct LogView: View {
                     }
                     .disabled(logs.isEmpty)
                     .menuActionDismissBehavior(.disabled)
+
+                    Menu {
+                        FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
+                    } label: {
+                        Image(systemName:
+                                logTypeVisibilityStore.logTypes.values.contains(false)
+                              ? "line.3.horizontal.decrease.circle.fill"
+                              :"line.3.horizontal.decrease.circle"
+                        )
+                    }
+                    .disabled(logs.isEmpty)
+                    .menuActionDismissBehavior(.disabled)
+                    
                     
                     
                 }
@@ -123,17 +152,14 @@ public struct LogView: View {
                     
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Menu {
-                        FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
+                   
+                    
+                    Button {
+                        showExport.toggle()
                     } label: {
-                        Image(systemName:
-                                logTypeVisibilityStore.logTypes.values.contains(false)
-                              ? "line.3.horizontal.decrease.circle.fill"
-                              :"line.3.horizontal.decrease.circle"
-                        )
+                        Image(systemName: "square.and.arrow.up")
                     }
                     .disabled(logs.isEmpty)
-                    .menuActionDismissBehavior(.disabled)
                     
                 }
                 
@@ -166,8 +192,8 @@ public struct LogView: View {
             fetchingLogs = true
             let store = try OSLogStore(scope: .currentProcessIdentifier)
             let predicate = NSPredicate(
-                format: "subsystem = %@",
-                Bundle.main.bundleIdentifier!
+                format: "subsystem IN %@",
+                self.subsystems
             )
             
             let newEntries = try store.getEntries(matching: predicate)

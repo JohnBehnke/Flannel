@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct LogEntryRowView: View {
     @Environment(\.horizontalSizeClass) var sizeClass
@@ -141,7 +142,6 @@ struct LogEntryRowView: View {
                         }
 
                     }
-                    
                 }
             }
         }
@@ -151,20 +151,10 @@ struct LogEntryRowView: View {
             : nil
         )
         .contextMenu {
-            Button("Copy with Visible Metadata", action: {})
-            Button("Copy with All Metadata", action: {})
-            Button("Copy without Metadata", action: {})
-            Divider()
-            Menu("Hide Similar Items") {
-                Button("Type '\(entry.level.rawValue.capitalized)'", action: {})
-                Button("PID '\((entry.processId.formatted(.number.grouping(.never))))'", action: {})
-                Button("Library '\(entry.library)'", action: {})
-                Button("Subsystem '\(entry.subsytem)'", action: {})
-                Button("Category '\(entry.category)'", action: {})
-                Button("TID '\(entry.threadId.formattedString)'", action: {})
-            }
-            Menu("Show Similar Items") {
-               
+            Button {
+                UIPasteboard.general.setValue(entry.description, forPasteboardType: UTType.plainText.identifier)
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
             }
         }
     }
@@ -189,11 +179,3 @@ struct LogEntryRowView: View {
 }
 
 
-
-
-/*
- 
- LOGS!
- Type: Fault | Timestamp: 2023-09-29 23:03:58.430022-04:00 | Library: Stellae | Subsystem: xyz.behnke.Stellae | Category: StellaeApp | TID: 0x58d67d
- 
- */

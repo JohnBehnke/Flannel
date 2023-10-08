@@ -66,6 +66,10 @@ struct FlannelLogEntry: Identifiable {
             return "exclamationmark.3"
         }
     }
+    
+    var description: String {
+        return "Message: \(message) | Type: \(level) | Timestamp: \(date.ISO8601Format()) | Library: \(library) | Subsystem: \(subsytem) | Category: \(category) | TID: \(threadId.formattedString) | PID: \(processId.formatted(.number.grouping(.never)))"
+    }
 }
 
 extension FlannelLogEntry {
@@ -78,3 +82,5 @@ extension FlannelLogEntry {
         ]
     }
 }
+
+
