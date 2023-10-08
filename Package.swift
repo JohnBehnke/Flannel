@@ -7,7 +7,7 @@ let package = Package(
     name: "Flannel",
     platforms: [
         .iOS(.v17),
-//        .macOS(.v14),
+        .macOS(.v14),
 //        .visionOS(.v1),
 //        .tvOS(.v17),
 //        .watchOS(.v10)

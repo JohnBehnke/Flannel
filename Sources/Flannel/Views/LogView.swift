@@ -40,6 +40,7 @@ public struct LogView: View {
     /// A display of logs captured by OSLog
     /// - Parameter subsystems: An array of bundle indentifiers to filter the OSLogStore by. By default, it will only filter by 'Bundle.main.bundleIdentifier'
     public init(subsystems: [String] = [Bundle.main.bundleIdentifier!]) {
+        logger.info("Info")
         self.subsystems = subsystems
     }
     public var body: some View {
@@ -73,6 +74,7 @@ public struct LogView: View {
                 await fetchLogs()
             }
             .toolbar {
+#if os(iOS)
                 ToolbarItemGroup(placement: .bottomBar) {
                     
                     Menu {
@@ -98,6 +100,7 @@ public struct LogView: View {
                     
                     
                 }
+#endif
                 ToolbarItemGroup(placement: .status) {
                     if fetchingLogs {
                         HStack {
@@ -138,6 +141,7 @@ public struct LogView: View {
                         }
                     }
                 }
+#if os(iOS)
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showExport.toggle()
@@ -145,9 +149,8 @@ public struct LogView: View {
                         Image(systemName: "square.and.arrow.up")
                     }
                     .disabled(logs.isEmpty)
-                }
+                } #endif
             }
-            .toolbar(.automatic, for: .bottomBar)
         }
         .onAppear {
             Task {

@@ -152,7 +152,11 @@ struct LogEntryRowView: View {
         )
         .contextMenu {
             Button {
+                #if os(iOS)
                 UIPasteboard.general.setValue(entry.description, forPasteboardType: UTType.plainText.identifier)
+                #elseif os(macOS)
+                NSPasteboard.general.setString(entry.description, forType: .string)
+                #endif
             } label: {
                 Label("Copy", systemImage: "doc.on.doc")
             }
