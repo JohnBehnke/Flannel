@@ -15,7 +15,6 @@ public struct LogView: View {
     @State private var fetchingLogs: Bool = false
     @State private var lastFetchTime: Date = .now
     @State private var showExport: Bool = false
-    @State private var newestFirst:Bool = true
     
     let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "View")
     
@@ -24,38 +23,24 @@ public struct LogView: View {
     private var searchResults: [FlannelLogEntry] {
         if searchText.isEmpty {
             return logs.filter { logTypeVisibilityStore.logTypes[$0.level] ?? false }
-                .sorted { newestFirst ? ($0.date > $1.date) : ($0.date < $1.date)  }
         } else {
             return logs.filter {
                 $0.message.lowercased().contains(searchText.lowercased())
                 && logTypeVisibilityStore.logTypes[$0.level] ?? false }
-            .sorted { $0.date > $1.date }
         }
+    }
+    
+    private var relativeDateFormatter: RelativeDateTimeFormatter {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        formatter.formattingContext = .beginningOfSentence
+        return formatter
     }
     
     /// A display of logs captured by OSLog
     /// - Parameter subsystems: An array of bundle indentifiers to filter the OSLogStore by. By default, it will only filter by 'Bundle.main.bundleIdentifier'
     public init(subsystems: [String] = [Bundle.main.bundleIdentifier!]) {
-        logger.debug("Debug log message")
-        logger.info("Info log message")
-        logger.notice("Notice log message")
-        logger.error("Error log message")
-        logger.fault("Fault log")
-        logger.debug("Debug log message")
-        logger.info("Info log message")
-        logger.notice("Notice log message")
-        logger.error("Error log message")
-        logger.fault("Fault log")
-        logger.debug("Debug log message")
-        logger.info("Info log message")
-        logger.notice("Notice log message")
-        logger.error("Error log message")
-        logger.fault("Fault log")
-        
-
         self.subsystems = subsystems
-        
-        
     }
     public var body: some View {
         Group {
@@ -64,6 +49,11 @@ public struct LogView: View {
             }
             if searchResults.isEmpty && !searchText.isEmpty && errorMessage.isEmpty {
                 ContentUnavailableView.search(text: searchText)
+            }
+            
+            if searchResults.isEmpty && searchText.isEmpty && errorMessage.isEmpty && attemptedLoad {
+                ContentUnavailableView("No Logs Found", systemImage: "magnifyingglass", description: Text("Check that the provided subsystems are correct"))
+                
             }
             
             List (searchResults) { log in
@@ -80,18 +70,6 @@ public struct LogView: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .bottomBar) {
-                    Menu {
-                        Toggle(isOn: $newestFirst) {
-                            Text("Newest first")
-                        }
-                        
-                    } label: {
-                        Image(systemName:
-                                "arrow.up.arrow.down"
-                        )
-                    }
-                    .disabled(logs.isEmpty)
-                    .menuActionDismissBehavior(.disabled)
                     
                     Menu {
                         MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
@@ -100,7 +78,7 @@ public struct LogView: View {
                     }
                     .disabled(logs.isEmpty)
                     .menuActionDismissBehavior(.disabled)
-
+                    
                     Menu {
                         FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
                     } label: {
@@ -129,14 +107,14 @@ public struct LogView: View {
                                 Image(systemName: "ellipsis")
                                     .symbolEffect(
                                         .variableColor
-                                        .iterative
-                                        .dimInactiveLayers
-                                        .nonReversing
+                                            .iterative
+                                            .dimInactiveLayers
+                                            .nonReversing
                                     )
                                     .font(.caption2)
                                     .padding(.bottom, 1)
                             }
-                               
+                            
                             
                         }
                         .font(.caption)
@@ -145,14 +123,21 @@ public struct LogView: View {
                         
                     }
                     else {
-                        Text("Last updated: \(lastFetchTime.formatted(date: .omitted, time: .shortened))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        
+                        TimelineView(.periodic(from: .now, by: 60)) { context in
+                            
+                            // Use a custom method because RelativeDateFormatter doesn't output a "Just Now"
+                            Text("Updated \(lastFetchTime.relativeTimestamp())")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            
+                        }
+                        
                     }
                     
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                   
+                    
                     
                     Button {
                         showExport.toggle()
@@ -200,8 +185,8 @@ public struct LogView: View {
                 .compactMap { $0 as? OSLogEntryLog }
             
             DispatchQueue.main.async {
+                fetchingLogs = false
                 self.logs = newEntries.map {
-                    fetchingLogs = false
                     return FlannelLogEntry(date: $0.date, category: $0.category, message: $0.formatString, subsytem: $0.subsystem, processId: Int($0.processIdentifier), threadId: ($0.threadIdentifier), library: $0.sender, processName: $0.process, level: FlannelLogLevel(rawLevel: $0.level.rawValue) ?? .unknown)
                 }
             }
@@ -218,3 +203,7 @@ public struct LogView: View {
             .navigationTitle("Logs")
     }
 }
+
+
+
+
