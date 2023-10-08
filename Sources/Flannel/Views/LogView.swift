@@ -62,10 +62,8 @@ public struct LogView: View {
                     .containerRelativeFrame(.vertical)
             }
             
-            if searchResults.isEmpty && searchText.isEmpty && attemptedLoad && error == nil {
-                ContentUnavailableView("No Logs Found", systemImage: "magnifyingglass", description: Text("Check that the provided subsystems are correct"))
-                    .containerRelativeFrame(.vertical)
-            }
+           
+                        
             
             List (searchResults) { log in
                 LogEntryRowView(
@@ -117,14 +115,11 @@ public struct LogView: View {
                                     .font(.caption2)
                                     .padding(.bottom, 1)
                             }
-                            
-                            
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         
-                    }
-                    else {
+                    } else {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             
                             // Use a custom method because RelativeDateFormatter doesn't output a "Just Now"
@@ -132,7 +127,6 @@ public struct LogView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        .containerRelativeFrame(.horizontal)
                     }
                 }
 #elseif os(macOS)
@@ -173,6 +167,7 @@ public struct LogView: View {
     
     func fetchLogs() async {
         do {
+            attemptedLoad = true
             fetchingLogs = true
             let store = try OSLogStore(scope: .currentProcessIdentifier)
             let predicate = NSPredicate(
