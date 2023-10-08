@@ -11,7 +11,7 @@ public struct LogView: View {
     @State private var searchText: String = ""
     @State private var logs: [FlannelLogEntry] = []
     @State private var attemptedLoad: Bool = true
-    @State private var errorMessage: String = ""
+    @State private var error: Error?
     @State private var fetchingLogs: Bool = false
     @State private var lastFetchTime: Date = .now
     @State private var showExport: Bool = false
@@ -44,15 +44,19 @@ public struct LogView: View {
     }
     public var body: some View {
         Group {
-            if !errorMessage.isEmpty {
-                ContentUnavailableView("Couldn't load logs", systemImage: "exclamationmark.triangle", description: Text(errorMessage))
+            if let error {
+                ContentUnavailableView("Couldn't load logs", systemImage: "exclamationmark.triangle", description: Text(error.localizedDescription))
+                    .containerRelativeFrame(.vertical)
             }
-            if searchResults.isEmpty && !searchText.isEmpty && errorMessage.isEmpty {
+            if searchResults.isEmpty && !searchText.isEmpty && error == nil {
                 ContentUnavailableView.search(text: searchText)
+                    .containerRelativeFrame(.vertical)
             }
             
-            if searchResults.isEmpty && searchText.isEmpty && errorMessage.isEmpty && attemptedLoad {
+            if searchResults.isEmpty && searchText.isEmpty && attemptedLoad && error == nil {
                 ContentUnavailableView("No Logs Found", systemImage: "magnifyingglass", description: Text("Check that the provided subsystems are correct"))
+                    .containerRelativeFrame(.vertical)
+                
                 
             }
             
@@ -132,22 +136,16 @@ public struct LogView: View {
                                 .foregroundStyle(.secondary)
                             
                         }
-                        
                     }
-                    
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    
-                    
                     Button {
                         showExport.toggle()
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
                     .disabled(logs.isEmpty)
-                    
                 }
-                
             }
             .toolbar(.automatic, for: .bottomBar)
         }
@@ -163,10 +161,10 @@ public struct LogView: View {
             defaultFilename: "\(Date.now.formatted(.iso8601.dateSeparator(.dash).timeSeparator(.colon)))-\(Bundle.main.bundleIdentifier!)"
         ) { result in
             switch result {
-            case .success(let file):
-                print(file)
+            case .success(_):
+                break
             case .failure(let error):
-                print(error)
+                self.error = error
             }
         }
     }
@@ -191,7 +189,7 @@ public struct LogView: View {
                 }
             }
         } catch {
-            print(error.localizedDescription)
+            self.error = error
             fetchingLogs = false
         }
     }
