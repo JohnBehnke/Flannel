@@ -46,6 +46,7 @@ struct LogEntryRowView: View {
                                     .background(entry.symbolColor)
                                     .clipShape(.rect(cornerRadius: 2))
                             }
+                            .buttonStyle(.plain)
                             
                             .popover(isPresented: $showTypePopover){
                                 
@@ -55,7 +56,11 @@ struct LogEntryRowView: View {
                                         .presentationDragIndicator(.visible)
                                 } else {
                                     LogTypeView(entry: entry)
+                                    #if os(iOS)
                                         .frame(width: 300, height: 100)
+                                    #elseif os(macOS)
+                                        .padding()
+                                    #endif
                                 }
                                 
                             }
@@ -101,6 +106,7 @@ struct LogEntryRowView: View {
                                         }
                                         
                                     }
+                                    .buttonStyle(.plain)
                                     .fontWeight(.bold)
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
@@ -112,7 +118,11 @@ struct LogEntryRowView: View {
                                                 .presentationDragIndicator(.visible)
                                         } else {
                                             PIDTIDView(entry: entry)
+                                            #if os(iOS)
                                                 .frame(width: 300, height: 200)
+                                            #elseif os(macOS)
+                                                .padding()
+                                            #endif
                                         }
                                         
                                     }

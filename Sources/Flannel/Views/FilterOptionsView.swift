@@ -10,7 +10,7 @@ import SwiftUI
 struct FilterOptionsView: View {
     @State var logTypeVisibilityStore: LogTypeVisibilityStore
     
-    #warning("I'm kind of grossed out by this pattern (setting state but then responding to on change, look into something better?")
+#warning("I'm kind of grossed out by this pattern (setting state but then responding to on change, look into something better?")
     @State private var showInfo: Bool = true
     @State private var showNotice: Bool = true
     @State private var showDebug: Bool = true
@@ -18,7 +18,7 @@ struct FilterOptionsView: View {
     @State private var showFault: Bool = true
     
     var body: some View {
-            
+        Menu {
             Toggle(isOn: $showInfo, label: {
                 Text("Info")
             }).onChange(of: showInfo) { _, newValue in
@@ -44,7 +44,13 @@ struct FilterOptionsView: View {
             }).onChange(of: showFault) { _, newValue in
                 logTypeVisibilityStore.logTypes[.fault] = newValue
             }
-        
+        } label: {
+            Image(systemName:
+                    logTypeVisibilityStore.logTypes.values.contains(false)
+                  ? "line.3.horizontal.decrease.circle.fill"
+                  :"line.3.horizontal.decrease.circle"
+            )
+        }
     }
 }
 

@@ -30,16 +30,24 @@ public struct LogView: View {
         }
     }
     
-    private var relativeDateFormatter: RelativeDateTimeFormatter {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        formatter.formattingContext = .beginningOfSentence
-        return formatter
-    }
-    
     /// A display of logs captured by OSLog
     /// - Parameter subsystems: An array of bundle indentifiers to filter the OSLogStore by. By default, it will only filter by 'Bundle.main.bundleIdentifier'
     public init(subsystems: [String] = [Bundle.main.bundleIdentifier!]) {
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
+        logger.info("Info")
         logger.info("Info")
         self.subsystems = subsystems
     }
@@ -57,8 +65,6 @@ public struct LogView: View {
             if searchResults.isEmpty && searchText.isEmpty && attemptedLoad && error == nil {
                 ContentUnavailableView("No Logs Found", systemImage: "magnifyingglass", description: Text("Check that the provided subsystems are correct"))
                     .containerRelativeFrame(.vertical)
-                
-                
             }
             
             List (searchResults) { log in
@@ -77,30 +83,20 @@ public struct LogView: View {
 #if os(iOS)
                 ToolbarItemGroup(placement: .bottomBar) {
                     
-                    Menu {
-                        MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
-                    } label: {
-                        Image(systemName: "switch.2")
-                    }
-                    .disabled(logs.isEmpty)
-                    .menuActionDismissBehavior(.disabled)
-                    
-                    Menu {
-                        FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
-                    } label: {
-                        Image(systemName:
-                                logTypeVisibilityStore.logTypes.values.contains(false)
-                              ? "line.3.horizontal.decrease.circle.fill"
-                              :"line.3.horizontal.decrease.circle"
-                        )
-                    }
-                    .disabled(logs.isEmpty)
-                    .menuActionDismissBehavior(.disabled)
-                    
-                    
+                    LogToolBarMenus(metadataVisibilityStore: metadataVisibilityStore, logTypeVisibilityStore: logTypeVisibilityStore)
+                        .disabled(logs.isEmpty)
+                        .menuActionDismissBehavior(.disabled)
                     
                 }
-#endif
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showExport.toggle()
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .disabled(logs.isEmpty)
+                }
+                
                 ToolbarItemGroup(placement: .status) {
                     if fetchingLogs {
                         HStack {
@@ -127,29 +123,31 @@ public struct LogView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         
-                        
                     }
                     else {
-                        
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             
                             // Use a custom method because RelativeDateFormatter doesn't output a "Just Now"
                             Text("Updated \(lastFetchTime.relativeTimestamp())")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            
                         }
+                        .containerRelativeFrame(.horizontal)
                     }
                 }
+#elseif os(macOS)
+                ToolbarItemGroup(placement: .secondaryAction) {
+                    
+                    
+                    LogToolBarMenus(metadataVisibilityStore: metadataVisibilityStore, logTypeVisibilityStore: logTypeVisibilityStore)
+                        .disabled(logs.isEmpty)
+                    
+                    
+                }
+#endif
 #if os(iOS)
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        showExport.toggle()
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    .disabled(logs.isEmpty)
-                } #endif
+                
+#endif
             }
         }
         .onAppear {
@@ -205,6 +203,13 @@ public struct LogView: View {
     }
 }
 
-
-
-
+struct LogToolBarMenus: View {
+    @State var metadataVisibilityStore: MetadataOptionVisibilityStore
+    @State var logTypeVisibilityStore: LogTypeVisibilityStore
+    var body: some View {
+        
+        MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
+        FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
+        
+    }
+}
