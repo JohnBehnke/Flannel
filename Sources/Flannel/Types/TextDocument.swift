@@ -1,6 +1,6 @@
 //
 //  TextDocument.swift
-//  
+//
 //
 //  Created by John Behnke on 9/29/23.
 //

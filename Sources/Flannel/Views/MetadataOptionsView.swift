@@ -10,7 +10,6 @@ import SwiftUI
 struct MetadataOptionsView: View {
     @State var metadataVisibilityStore: MetadataOptionVisibilityStore
     var body: some View {
-        
         Menu {
             Toggle(isOn: $metadataVisibilityStore.showMetadata, label: {
                 Text("Metadata")

@@ -19,6 +19,7 @@ struct FlannelLogEntry: Identifiable {
     let library: String
     let processName: String
     let level: FlannelLogLevel
+
     var rowColor: Color {
         switch level {
         case .unknown, .debug, .notice:

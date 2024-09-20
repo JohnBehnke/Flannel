@@ -13,18 +13,15 @@ struct LogEntryRowView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var showPIDTIDPopover: Bool = false
     @State private var showTypePopover: Bool = false
-
+    
     let entry: FlannelLogEntry
     let metadataVisibility: MetadataOptionVisibilityStore
     
     var body: some View {
         HStack {
             VStack(spacing: 12) {
-                
-                #warning("Not sure on this color yet...")
                 Text(entry.message)
                     .fontWeight(.bold)
-               
                     .foregroundStyle(colorScheme == .light ? .gray : .white)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -56,15 +53,13 @@ struct LogEntryRowView: View {
                                         .presentationDragIndicator(.visible)
                                 } else {
                                     LogTypeView(entry: entry)
-                                    #if os(iOS)
+#if os(iOS)
                                         .frame(width: 300, height: 100)
-                                    #elseif os(macOS)
+#elseif os(macOS)
                                         .padding()
-                                    #endif
+#endif
                                 }
-                                
                             }
-                            
                         }
                         
                         ScrollView(.horizontal, showsIndicators: false){
@@ -118,11 +113,11 @@ struct LogEntryRowView: View {
                                                 .presentationDragIndicator(.visible)
                                         } else {
                                             PIDTIDView(entry: entry)
-                                            #if os(iOS)
+#if os(iOS)
                                                 .frame(width: 300, height: 200)
-                                            #elseif os(macOS)
+#elseif os(macOS)
                                                 .padding()
-                                            #endif
+#endif
                                         }
                                         
                                     }
@@ -150,7 +145,7 @@ struct LogEntryRowView: View {
                                 }
                             }
                         }
-
+                        
                     }
                 }
             }
@@ -162,11 +157,11 @@ struct LogEntryRowView: View {
         )
         .contextMenu {
             Button {
-                #if os(iOS)
+#if os(iOS)
                 UIPasteboard.general.setValue(entry.description, forPasteboardType: UTType.plainText.identifier)
-                #elseif os(macOS)
+#elseif os(macOS)
                 NSPasteboard.general.setString(entry.description, forType: .string)
-                #endif
+#endif
             } label: {
                 Label("Copy", systemImage: "doc.on.doc")
             }

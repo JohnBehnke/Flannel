@@ -33,22 +33,6 @@ public struct LogView: View {
     /// A display of logs captured by OSLog
     /// - Parameter subsystems: An array of bundle indentifiers to filter the OSLogStore by. By default, it will only filter by 'Bundle.main.bundleIdentifier'
     public init(subsystems: [String] = [Bundle.main.bundleIdentifier!]) {
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
-        logger.info("Info")
         self.subsystems = subsystems
     }
     public var body: some View {
@@ -61,9 +45,6 @@ public struct LogView: View {
                 ContentUnavailableView.search(text: searchText)
                     .containerRelativeFrame(.vertical)
             }
-            
-           
-                        
             
             List (searchResults) { log in
                 LogEntryRowView(
@@ -80,10 +61,12 @@ public struct LogView: View {
             .toolbar {
 #if os(iOS)
                 ToolbarItemGroup(placement: .bottomBar) {
-                    
-                    LogToolBarMenus(metadataVisibilityStore: metadataVisibilityStore, logTypeVisibilityStore: logTypeVisibilityStore)
-                        .disabled(logs.isEmpty)
-                        .menuActionDismissBehavior(.disabled)
+                    LogToolBarMenus(
+                        metadataVisibilityStore: metadataVisibilityStore,
+                        logTypeVisibilityStore: logTypeVisibilityStore
+                    )
+                    .disabled(logs.isEmpty)
+                    .menuActionDismissBehavior(.disabled)
                     
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
@@ -131,12 +114,8 @@ public struct LogView: View {
                 }
 #elseif os(macOS)
                 ToolbarItemGroup(placement: .secondaryAction) {
-                    
-                    
                     LogToolBarMenus(metadataVisibilityStore: metadataVisibilityStore, logTypeVisibilityStore: logTypeVisibilityStore)
                         .disabled(logs.isEmpty)
-                    
-                    
                 }
 #endif
 #if os(iOS)
@@ -181,7 +160,21 @@ public struct LogView: View {
             DispatchQueue.main.async {
                 fetchingLogs = false
                 self.logs = newEntries.map {
-                    return FlannelLogEntry(date: $0.date, category: $0.category, message: $0.formatString, subsytem: $0.subsystem, processId: Int($0.processIdentifier), threadId: ($0.threadIdentifier), library: $0.sender, processName: $0.process, level: FlannelLogLevel(rawLevel: $0.level.rawValue) ?? .unknown)
+                    return FlannelLogEntry(
+                        date: $0.date,
+                        category: $0.category,
+                        message: $0.formatString,
+                        subsytem: $0.subsystem,
+                        processId: Int(
+                            $0.processIdentifier
+                        ),
+                        threadId: $0.threadIdentifier,
+                        library: $0.sender,
+                        processName: $0.process,
+                        level: FlannelLogLevel(
+                            rawLevel: $0.level.rawValue
+                        ) ?? .unknown
+                    )
                 }
             }
         } catch {
@@ -198,13 +191,4 @@ public struct LogView: View {
     }
 }
 
-struct LogToolBarMenus: View {
-    @State var metadataVisibilityStore: MetadataOptionVisibilityStore
-    @State var logTypeVisibilityStore: LogTypeVisibilityStore
-    var body: some View {
-        
-        MetadataOptionsView(metadataVisibilityStore: metadataVisibilityStore)
-        FilterOptionsView(logTypeVisibilityStore: logTypeVisibilityStore)
-        
-    }
-}
+
