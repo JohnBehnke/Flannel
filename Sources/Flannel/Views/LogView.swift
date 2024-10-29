@@ -163,7 +163,7 @@ public struct LogView: View {
                     return FlannelLogEntry(
                         date: $0.date,
                         category: $0.category,
-                        message: $0.formatString,
+                        message: $0.composedMessage,
                         subsytem: $0.subsystem,
                         processId: Int(
                             $0.processIdentifier
