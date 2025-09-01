@@ -20,6 +20,7 @@ struct LogTypeView: View {
                     .font(.footnote)
             }
         }
+        .padding()
     }
 }
 
