@@ -3,69 +3,14 @@ import OSLog
 
 
 public struct LogView: View {
-  private enum LogsScreenState: Equatable { case error, searching, noSearch, empty, list }
   
-  private struct LogsOverlayView: View {
-    let state: LogsScreenState
-    let errorDescription: String?
-    let searchText: String
-    let subsystemsCount: Int
-    
-    var body: some View {
-      switch state {
-        case .error:
-          ContentUnavailableView(
-            "Couldn't load logs",
-            systemImage: "exclamationmark.triangle",
-            description: Text(errorDescription ?? "Unknown error")
-          )
-          .containerRelativeFrame(.vertical)
-          .transition(.opacity.combined(with: .scale(0.98)))
-          
-        case .searching:
-          ContentUnavailableView {
-            Label("Searching Logs…", systemImage: "magnifyingglass.circle.fill")
-          } description: {
-            VStack(spacing: 8) {
-              Text("Scanning \(subsystemsCount) subsystem(s)…")
-                .foregroundStyle(.secondary)
-              ProgressView()
-                .controlSize(.large)
-            }
-          }
-          .containerRelativeFrame(.vertical)
-          .transition(.opacity.combined(with: .scale(0.98)))
-          
-        case .noSearch:
-          ContentUnavailableView.search(text: searchText)
-            .containerRelativeFrame(.vertical)
-            .transition(.opacity.combined(with: .scale(0.98)))
-          
-        case .empty:
-          ContentUnavailableView(
-            "No Logs",
-            systemImage: "doc.text.magnifyingglass",
-            description: Text("No log entries were found for the selected subsystems.")
-          )
-          .containerRelativeFrame(.vertical)
-          .transition(.opacity.combined(with: .scale(0.98)))
-          
-        case .list:
-          EmptyView()
-      }
-    }
-  }
-  
-  @State private var metadataVisibilityStore: MetadataOptionVisibilityStore = MetadataOptionVisibilityStore()
-  @State private var logTypeVisibilityStore: LogTypeVisibilityStore = LogTypeVisibilityStore()
   
   @State private var subtitleText: String = "Fetching Logs..."
-  
   
   @State private var searchText: String = ""
   @State private var logs: [FlannelLogEntry] = []
   @State private var error: Error?
-  @State private var fetchingLogs: Bool = true
+  @State private var fetchingLogs: Bool = false
   @State private var lastFetchTime: Date = .now
   @State private var showExport: Bool = false
   
@@ -73,48 +18,13 @@ public struct LogView: View {
   
   var subsystems: [String]
   
-  private var screenState: LogsScreenState {
-    if error != nil { return .error }
-    if fetchingLogs { return .searching }
-    if !searchText.isEmpty && searchResults.isEmpty { return .noSearch }
-    if logs.isEmpty { return .empty }
-    return .list
-  }
-  
-  var searchResults: [FlannelLogEntry] {
+  private var searchResults: [FlannelLogEntry] {
     if searchText.isEmpty {
-      return logs.filter { logTypeVisibilityStore.logTypes[$0.level] ?? false }
+      return logs
     } else {
       return logs.filter {
         $0.message.lowercased().contains(searchText.lowercased())
-        && logTypeVisibilityStore.logTypes[$0.level] ?? false }
-    }
-  }
-  
-  @ViewBuilder
-  private var baseContent: some View {
-    if screenState == .list {
-      List(searchResults) { log in
-        LogEntryRowView(
-          entry: log,
-          metadataVisibility: metadataVisibilityStore
-        )
       }
-      .listStyle(.plain)
-      .refreshable {
-        subtitleText = "Fetching Logs..."
-        await fetchLogs()
-        subtitleText = "Updated Just Now"
-        Task {
-          try? await Task.sleep(for: .seconds(5))
-          subtitleText = "\(self.searchResults.count) logs"
-        }
-      }
-      .transition(.opacity)
-    } else {
-      // Keep layout height so overlay centers nicely
-      Color.clear
-        .containerRelativeFrame(.vertical)
     }
   }
   
@@ -124,48 +34,73 @@ public struct LogView: View {
     self.subsystems = subsystems
   }
   public var body: some View {
-    baseContent
-      .overlay {
-        LogsOverlayView(
-          state: screenState,
-          errorDescription: error?.localizedDescription,
-          searchText: searchText,
-          subsystemsCount: subsystems.count
+    List(searchResults) { entry in
+      Text(entry.id.uuidString)
+    }
+    .onAppear {
+      Task {
+        await fetchLogs()
+        subtitleText = "\(logs.count) Logs"
+      }
+    }
+    .overlay {
+      if fetchingLogs && searchText.isEmpty {
+        ContentUnavailableView {
+          Label {
+            HStack(alignment: .bottom,spacing: 0) {
+              Text("Fetching Logs")
+              Image(systemName: "ellipsis")
+                .symbolEffect(
+                  .variableColor
+                    .iterative
+                    .dimInactiveLayers
+                    .nonReversing
+                )
+                .padding(.bottom, 3)
+            }
+          } icon: {
+            Image(systemName: "text.page.badge.magnifyingglass")
+              .symbolEffect(.pulse)
+          }
+        }
+        
+      } else if searchResults.isEmpty && !searchText.isEmpty {
+        ContentUnavailableView.search(text: searchText)
+      } else if searchResults.isEmpty {
+        ContentUnavailableView(
+          "No Logs",
+          systemImage: "doc.text.magnifyingglass",
+          description: Text("No log entries were found for the selected subsystems.")
         )
       }
-      .animation(.easeInOut, value: screenState)
-      .searchable(text: $searchText)
-      .toolbar {
-        exportButton
-        metadataButton
-        ToolbarSpacer(.fixed, placement: .bottomBar)
-        DefaultToolbarItem(kind: .search, placement: .bottomBar)
-        ToolbarSpacer(.fixed, placement: .bottomBar)
-        filterButton
-      }
-      .onAppear {
-        subtitleText = "Fetching Logs..."
+    }
+    .searchable(
+      text: $searchText,
+      placement: .automatic,
+      prompt: "Search Logs"
+    )
+    .refreshable {
+      Task {
+        await fetchLogs()
+        subtitleText = "Updated Just Now"
         Task {
-          await fetchLogs()
-          subtitleText = "\(self.searchResults.count) logs"
-          
+          try? await Task.sleep(for: .seconds(5))
+          subtitleText = "\(self.searchResults.count) Logs"
         }
       }
-      .navigationTitle("Logs")
-      .navigationSubtitle(subtitleText)
-      .fileExporter(
-        isPresented: $showExport,
-        document: TextDocument(text: logs.map { $0.message }.joined(separator: "\n")),
-        contentType: .plainText,
-        defaultFilename: "\(Date.now.formatted(.iso8601.dateSeparator(.dash).timeSeparator(.colon)))-\(Bundle.main.bundleIdentifier!)"
-      ) { result in
-        switch result {
-          case .success(_):
-            break
-          case .failure(let error):
-            self.error = error
-        }
-      }
+    }
+    .toolbar {
+      exportButton
+      metadataButton
+      ToolbarSpacer(.fixed, placement: .bottomBar)
+      DefaultToolbarItem(kind: .search, placement: .bottomBar)
+      ToolbarSpacer(.fixed, placement: .bottomBar)
+      filterButton
+      
+    }
+    .navigationTitle("Logs")
+    .navigationSubtitle(subtitleText)
+    
   }
   
   @ToolbarContentBuilder
@@ -173,6 +108,7 @@ public struct LogView: View {
     ToolbarItem(placement: .bottomBar) {
       Button("Filter", systemImage: "line.3.horizontal.decrease") {
       }
+      .disabled(logs.isEmpty)
     }
   }
   
@@ -181,6 +117,7 @@ public struct LogView: View {
     ToolbarItem(placement: .bottomBar) {
       Button("Filter", systemImage: "switch.2") {
       }
+      .disabled(logs.isEmpty)
     }
   }
   
@@ -196,9 +133,10 @@ public struct LogView: View {
     }
   }
   
-  
   func fetchLogs() async {
-    defer { fetchingLogs = false }
+    defer {
+      fetchingLogs = false
+    }
     do {
       fetchingLogs = true
       let store = try OSLogStore(scope: .currentProcessIdentifier)
