@@ -7,8 +7,11 @@
 
 import Foundation
 
+/// Extension adding hexadecimal string formatting to UInt64.
 extension UInt64 {
-    var formattedString: String {
-        "0x\(String(self, radix: 16))"
-    }
+  /// A string representation of the unsigned 64-bit integer in hexadecimal format, 
+  /// prefixed with "0x".
+  var formattedString: String {
+    "0x\(String(self, radix: 16))"
+  }
 }

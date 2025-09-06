@@ -1,34 +1,61 @@
 import SwiftUI
 import OSLog
 
+/// A SwiftUI view that displays logs retrieved from the OSLogStore with filtering, searching, and metadata display controls.
 public struct LogView: View {
   
+  /// The list of subsystems whose logs will be displayed.
   private let subsystems: [String]
   
+  /// The subtitle text shown below the navigation title, reflecting log status.
   @State private var subtitleText: String = "Fetching Logs..."
+  /// The current text input used to filter logs by message content.
   @State private var searchText: String = ""
+  /// The array of fetched log entries.
   @State private var logs: [LogEntry] = []
+  /// Any error encountered during log fetching.
   @State private var error: Error?
+  /// Tracks whether the view is currently loading logs.
   @State private var isLoading: Bool = false
+  /// Tracks whether the view is performing its first log fetch.
   @State private var isFirstLoad: Bool = true
+  /// The timestamp of the last successful log fetch.
   @State private var lastFetchTime: Date = .now
+  /// Controls whether the export UI is shown.
   @State private var showExport: Bool = false
+  /// Task that updates the subtitle text asynchronously.
   @State private var subtitleUpdateTask: Task<Void, Never>? = nil
   
+  /// The set of metadata fields selected for display in each log entry.
   @State private var selectedMetadatas: Set<Metadata> = [
     .type,
     .timestamp,
     .subsystem,
-    .category
+    .category,
+    .library,
+    .pidtid,
+    .category,
+    .processName
   ]
-  @State private var selectedLevels: Set<LogLevel> = [.info, .error]
+  /// The set of log levels selected for filtering displayed logs.
+  @State private var selectedLevels: Set<LogLevel> = [
+    .info,
+    .error,
+    .debug,
+    .fault,
+    .notice
+  ]
+  /// Controls whether metadata columns are shown in the log list.
   @State private var showMetadata: Bool = true
   
+  /// Initializes a new LogView with the given subsystems.
+  /// - Parameter subsystems: An array of subsystem identifiers to filter logs by. Defaults to the main bundle identifier.
   public init(subsystems: [String] = [Bundle.main.bundleIdentifier!]) {
     self.subsystems = subsystems
   }
   
   
+  /// Computed property that filters logs by selected levels and search text.
   private var searchResults: [LogEntry] {
     let filteredByLevels = logs.filter { selectedLevels.contains($0.level) }
     if searchText.isEmpty { return filteredByLevels }
@@ -36,6 +63,7 @@ public struct LogView: View {
       .filter { $0.message.lowercased().contains(searchText.lowercased()) }
   }
   
+  /// The main view body showing log content, search, toolbar, and navigation configuration.
   public var body: some View {
     logContent
       .task(id: subsystems) { await fetchLogs(showSpinner: true) }
@@ -54,6 +82,7 @@ public struct LogView: View {
       .onDisappear { subtitleUpdateTask?.cancel() }
   }
   
+  /// A toolbar menu that allows filtering logs by their log level.
   @ToolbarContentBuilder
   private var filterButton: some ToolbarContent {
     ToolbarItem(placement: .bottomBar) {
@@ -69,6 +98,7 @@ public struct LogView: View {
     }
   }
   
+  /// A toolbar menu that toggles metadata display and selects which metadata fields to show.
   @ToolbarContentBuilder
   private var metadataButton: some ToolbarContent {
     ToolbarItem(placement: .bottomBar) {
@@ -93,6 +123,7 @@ public struct LogView: View {
     }
   }
   
+  /// A toolbar button that deletes all currently loaded logs.
   @ToolbarContentBuilder
   private var deleteButton: some ToolbarContent {
     ToolbarItem(placement: .topBarTrailing) {
@@ -104,6 +135,7 @@ public struct LogView: View {
     }
   }
   
+  /// Displays the main content area of the log view, including fetch, empty states, or a list of logs.
   @ViewBuilder
   private var logContent: some View {
     if isFirstLoad && searchText.isEmpty {
@@ -139,6 +171,11 @@ public struct LogView: View {
     }
   }
   
+  /// Creates a binding that toggles membership of an item in a set.
+  /// - Parameters:
+  ///   - item: The item to toggle membership for.
+  ///   - set: A binding to the set of items.
+  /// - Returns: A binding to a Boolean indicating whether the item is in the set.
   private func membershipBinding<T: Hashable>(for item: T, in set: Binding<Set<T>>) -> Binding<Bool> {
     Binding(
       get: { set.wrappedValue.contains(item) },
@@ -150,6 +187,8 @@ public struct LogView: View {
     )
   }
   
+  /// Fetches logs from the OSLogStore asynchronously, updating state and subtitle text.
+  /// - Parameter showSpinner: A Boolean indicating whether to show a loading spinner during fetch.
   private func fetchLogs(showSpinner: Bool) async {
     // Flip/loading flags strictly on the main actor
     let alreadyLoading: Bool = await MainActor.run {
@@ -170,21 +209,17 @@ public struct LogView: View {
     }
     
     do {
-      // Snapshot values we need for the background task
       let subsystemsCopy = self.subsystems
       let lastSeen = await MainActor.run { self.lastFetchTime }
       
-      // Heavy work off the main actor
       let (fetchedLogs, fetchedAt): ([LogEntry], Date) = try await Task.detached(priority: .utility) {
         let store = try OSLogStore(scope: .currentProcessIdentifier)
         let predicate = NSPredicate(format: "subsystem IN %@", subsystemsCopy)
         
-        // On first load, scan broadly; on refresh, resume near last fetch for smaller work
         let rawEntries: [OSLogEntryLog]
         if showSpinner {
           rawEntries = try store.getEntries(matching: predicate).compactMap { $0 as? OSLogEntryLog }
         } else {
-          // Small overlap to avoid missing boundary entries
           let pos = store.position(date: lastSeen.addingTimeInterval(-2))
           rawEntries = try store.getEntries(at: pos, matching: predicate).compactMap { $0 as? OSLogEntryLog }
         }
@@ -205,7 +240,6 @@ public struct LogView: View {
         return (mapped, Date())
       }.value
       
-      // Publish results back to the UI on the main actor
       await MainActor.run {
         self.logs = fetchedLogs
         self.lastFetchTime = fetchedAt
