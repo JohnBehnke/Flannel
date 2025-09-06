@@ -9,182 +9,137 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct LogEntryRowView: View {
-    @Environment(\.horizontalSizeClass) var sizeClass
-    @Environment(\.colorScheme) var colorScheme
-    @State private var showPIDTIDPopover: Bool = false
-    @State private var showTypePopover: Bool = false
-    
-    let entry: FlannelLogEntry
-    let metadataVisibility: MetadataOptionVisibilityStore
+  @Environment(\.colorScheme) private var colorScheme
+  
+  let visibleMetadata: Set<Metadata>
+  let entry: LogEntry
+  let showMetadata: Bool
+  
+  static let timeFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "HH:mm:ss.SSSS"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    return formatter
+  }()
+  
+  // MARK: - Nested UI helpers
+  // Small, reusable style for metadata text
+  private struct MetaStyle: ViewModifier {
+    func body(content: Content) -> some View {
+      content
+        .font(.caption2)
+        .bold()
+        .foregroundStyle(.tertiary)
+    }
+  }
+  
+  /// Tiny badge for the log level / type symbol with a colored background
+  private struct LevelBadge: View {
+    let symbol: String
+    let color: Color
     
     var body: some View {
-        HStack {
-            VStack(spacing: 12) {
-                Text(entry.message)
-                    .fontWeight(.bold)
-                    .foregroundStyle(colorScheme == .light ? .gray : .white)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(3)
-                
-                if metadataVisibility.showMetadata {
-                    HStack {
-                        if metadataVisibility.showType {
-                            Button {
-                                showTypePopover.toggle()
-                            } label: {
-                                Image(systemName: entry.symbol)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 8, height: 8)
-                                    .padding(3)
-                                    .font(.caption2)
-                                    .foregroundColor(.white)
-                                    .background(entry.symbolColor)
-                                    .clipShape(.rect(cornerRadius: 2))
-                            }
-                            .buttonStyle(.plain)
-                            
-                            .popover(isPresented: $showTypePopover){
-                                
-                                if sizeClass == .compact {
-                                    LogTypeView(entry: entry)
-                                        .presentationDetents([.fraction(0.2)])
-                                        .presentationDragIndicator(.visible)
-                                } else {
-                                    LogTypeView(entry: entry)
-#if os(iOS)
-                                        .frame(width: 300, height: 100)
-#elseif os(macOS)
-                                        .padding()
-#endif
-                                }
-                            }
-                        }
-                        
-                        ScrollView(.horizontal, showsIndicators: false){
-                            HStack {
-                                if metadataVisibility.showTimestamp {
-                                    
-                                    Text(dateFormatter.string(from: entry.date))
-                                        .fontWeight(.bold)
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
-                                }
-                                
-                                if metadataVisibility.showProcessName {
-                                    HStack(spacing: 2) {
-                                        Image(systemName: "apple.terminal")
-                                        Text(entry.processName)
-                                    }
-                                    .fontWeight(.bold)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                }
-                                if metadataVisibility.showLibrary {
-                                    HStack(spacing: 2) {
-                                        Image(systemName: "building.columns")
-                                        Text(entry.library)
-                                    }
-                                    .fontWeight(.bold)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                }
-                                
-                                if metadataVisibility.showPIDTID {
-                                    Button {
-                                        showPIDTIDPopover.toggle()
-                                    } label: {
-                                        HStack(spacing: 2) {
-                                            Image(systemName: "tag")
-                                            Text("\(entry.processId.formatted(.number.grouping(.never))):0x\(String(entry.threadId, radix: 16))")
-                                        }
-                                        
-                                    }
-                                    .buttonStyle(.plain)
-                                    .fontWeight(.bold)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                    .popover(isPresented: $showPIDTIDPopover){
-                                        
-                                        if sizeClass == .compact {
-                                            PIDTIDView(entry: entry)
-                                                .presentationDetents([.fraction(0.3)])
-                                                .presentationDragIndicator(.visible)
-                                        } else {
-                                            PIDTIDView(entry: entry)
-#if os(iOS)
-                                                .frame(width: 300, height: 200)
-#elseif os(macOS)
-                                                .padding()
-#endif
-                                        }
-                                        
-                                    }
-                                    
-                                }
-                                
-                                if metadataVisibility.showSubsystem {
-                                    HStack(spacing: 2) {
-                                        Image(systemName: "gearshape.2")
-                                        Text(entry.subsytem)
-                                    }
-                                    .fontWeight(.bold)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                }
-                                
-                                if metadataVisibility.showCategory {
-                                    HStack(spacing: 2) {
-                                        Image(systemName: "square.grid.3x3")
-                                        Text(entry.category)
-                                    }
-                                    .fontWeight(.bold)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                }
-                            }
-                        }
-                        
-                    }
-                }
-            }
-        }
-        .listRowBackground(
-            metadataVisibility.showMetadata
-            ? entry.rowColor.opacity(0.2)
-            : nil
-        )
-        .contextMenu {
-            Button {
-#if os(iOS)
-                UIPasteboard.general.setValue(entry.description, forPasteboardType: UTType.plainText.identifier)
-#elseif os(macOS)
-                NSPasteboard.general.setString(entry.description, forType: .string)
-#endif
-            } label: {
-                Label("Copy", systemImage: "doc.on.doc")
-            }
-        }
+      Image(systemName: symbol)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 8, height: 8)
+        .padding(3)
+        .font(.caption2)
+        .foregroundStyle(.white)
+        .background(color)
+        .clipShape(.rect(cornerRadius: 2))
+        .accessibilityHidden(true)
     }
+  }
+  
+  /// Generic metadata pill with an optional SF Symbol and a text value
+  private struct MetaItem: View {
+    var systemName: String?
+    var text: String
     
-    var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss.SSSS"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
+    var body: some View {
+      HStack(spacing: 2) {
+        if let systemName { Image(systemName: systemName) }
+        Text(text)
+      }
+      .modifier(MetaStyle())
     }
+  }
+  
+  var body: some View {
+    HStack(alignment: .top) {
+      VStack(spacing: 12) {
+        Text(entry.message)
+          .fontWeight(.bold)
+          .foregroundStyle(colorScheme == .light ? .gray : .white)
+          .multilineTextAlignment(.leading)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .lineLimit(3)
+        
+        if showMetadata { metadataRow }
+      }
+    }
+    .listRowBackground(showMetadata ? entry.rowColor.opacity(0.2) : nil)
+    .contextMenu { copyContextMenu }
+  }
+  
+  @ViewBuilder
+  var metadataRow: some View {
+    HStack(alignment: .center, spacing: 8) {
+      if visibleMetadata.contains(.type) {
+        LevelBadge(symbol: entry.symbol, color: entry.symbolColor)
+      }
+      
+      ScrollView(.horizontal, showsIndicators: false) {
+        LazyHStack(spacing: 12) {
+          if visibleMetadata.contains(.timestamp) {
+            MetaItem(systemName: nil, text: Self.timeFormatter.string(from: entry.date))
+          }
+          
+          if visibleMetadata.contains(.processName) {
+            MetaItem(systemName: "apple.terminal", text: entry.processName)
+          }
+          
+          if visibleMetadata.contains(.library) {
+            MetaItem(systemName: "building.columns", text: entry.library)
+          }
+          
+          if visibleMetadata.contains(.pidtid) {
+            
+            MetaItem(
+              systemName: "tag",
+              text: "\(entry.processId.formatted(.number.grouping(.never))):0x\(String(entry.threadId, radix: 16))"
+            )
+          }
+          
+          if visibleMetadata.contains(.subsystem) {
+            MetaItem(systemName: "gearshape.2", text: entry.subsystem)
+          }
+          
+          if visibleMetadata.contains(.category) {
+            MetaItem(systemName: "square.grid.3x3", text: entry.category)
+          }
+        }
+      }
+    }
+  }
+  
+  var copyContextMenu: some View {
+    Button {
+      UIPasteboard.general.setValue(entry.description, forPasteboardType: UTType.plainText.identifier)
+    } label: {
+      Label("Copy", systemImage: "doc.on.doc")
+    }
+  }
 }
 
 #Preview {
-    List(FlannelLogEntry.mockFlannelEntries) { entry in
-        LogEntryRowView(
-            entry: entry,
-            metadataVisibility: MetadataOptionVisibilityStore()
-        )
-        
-    }
-    .listStyle(.plain)
+  List(LogEntry.mockFlannelEntries) { entry in
+    LogEntryRowView(
+      visibleMetadata: Set(Metadata.allCases),
+      entry: entry,
+      showMetadata: true
+    )
+  }
+  .listStyle(.plain)
 }
-
-

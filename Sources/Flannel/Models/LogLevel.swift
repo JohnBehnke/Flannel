@@ -1,5 +1,5 @@
 //
-//  FlannelLogLevel.swift
+//  LogLevel.swift
 //  
 //
 //  Created by John Behnke on 9/29/23.
@@ -7,16 +7,17 @@
 
 import Foundation
 
-enum FlannelLogLevel: String {
-    case unknown
-    case debug
-    case info
-    case notice
-    case error
-    case fault
+enum LogLevel: String, CaseIterable, Identifiable {
+    case debug = "Debug"
+    case info = "Info"
+    case notice = "Notice"
+    case error = "Error"
+    case fault = "Fault"
+  
+  var id: String { rawValue }
 }
 
-extension FlannelLogLevel {
+extension LogLevel {
     init?(rawLevel: Int) {
         switch rawLevel {
         case 1:
@@ -29,9 +30,8 @@ extension FlannelLogLevel {
             self = .error
         case 5:
             self = .fault
-        default:
-            self = .unknown
-            
+          default:
+            self = .info
         }
     }
 }

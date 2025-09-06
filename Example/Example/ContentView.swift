@@ -23,7 +23,9 @@ struct ContentView: View {
         logger.notice("Notice")
     }
     var body: some View {
+      NavigationStack {
         LogView()
+      }
     }
 }
 
