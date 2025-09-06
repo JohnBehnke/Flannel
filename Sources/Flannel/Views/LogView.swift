@@ -2,7 +2,7 @@ import SwiftUI
 import OSLog
 
 public struct LogView: View {
-
+  
   private let subsystems: [String]
   
   @State private var subtitleText: String = "Fetching Logs..."
@@ -28,7 +28,7 @@ public struct LogView: View {
     self.subsystems = subsystems
   }
   
-
+  
   private var searchResults: [LogEntry] {
     let filteredByLevels = logs.filter { selectedLevels.contains($0.level) }
     if searchText.isEmpty { return filteredByLevels }
@@ -103,7 +103,7 @@ public struct LogView: View {
       .disabled(logs.isEmpty)
     }
   }
-
+  
   @ViewBuilder
   private var logContent: some View {
     if isFirstLoad && searchText.isEmpty {
@@ -152,7 +152,9 @@ public struct LogView: View {
   
   @MainActor
   private func fetchLogs(showSpinner: Bool) async {
-    if showSpinner { isLoading = true }
+    let alreadyLoading = await MainActor.run { isLoading }
+    if alreadyLoading { return }
+    if showSpinner { await MainActor.run { isLoading = true } }
     defer {
       if showSpinner {
         isLoading = false

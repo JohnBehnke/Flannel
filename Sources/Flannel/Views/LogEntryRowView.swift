@@ -22,8 +22,6 @@ struct LogEntryRowView: View {
     return formatter
   }()
   
-  // MARK: - Nested UI helpers
-  // Small, reusable style for metadata text
   private struct MetaStyle: ViewModifier {
     func body(content: Content) -> some View {
       content
@@ -33,7 +31,6 @@ struct LogEntryRowView: View {
     }
   }
   
-  /// Tiny badge for the log level / type symbol with a colored background
   private struct LevelBadge: View {
     let symbol: String
     let color: Color
@@ -52,7 +49,6 @@ struct LogEntryRowView: View {
     }
   }
   
-  /// Generic metadata pill with an optional SF Symbol and a text value
   private struct MetaItem: View {
     var systemName: String?
     var text: String
@@ -67,18 +63,17 @@ struct LogEntryRowView: View {
   }
   
   var body: some View {
-    HStack(alignment: .top) {
-      VStack(spacing: 12) {
-        Text(entry.message)
-          .fontWeight(.bold)
-          .foregroundStyle(colorScheme == .light ? .gray : .white)
-          .multilineTextAlignment(.leading)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .lineLimit(3)
-        
-        if showMetadata { metadataRow }
-      }
+    
+    VStack(alignment: .leading, spacing: 12) {
+      Text(entry.message)
+        .fontWeight(.bold)
+        .foregroundStyle(colorScheme == .light ? .gray : .white)
+        .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
+      
+      if showMetadata { metadataRow }
     }
+    
     .listRowBackground(showMetadata ? entry.rowColor.opacity(0.2) : nil)
     .contextMenu { copyContextMenu }
   }
