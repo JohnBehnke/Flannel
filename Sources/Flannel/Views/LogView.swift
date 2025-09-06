@@ -38,7 +38,7 @@ public struct LogView: View {
   
   public var body: some View {
     logContent
-      .task { await fetchLogs(showSpinner: true) }
+      .task(id: subsystems) { await fetchLogs(showSpinner: true) }
       .searchable(text: $searchText, placement: .automatic, prompt: "Search Logs")
       .refreshable { await fetchLogs(showSpinner: false) }
       .toolbar {
@@ -150,52 +150,84 @@ public struct LogView: View {
     )
   }
   
-  @MainActor
   private func fetchLogs(showSpinner: Bool) async {
-    let alreadyLoading = await MainActor.run { isLoading }
+    // Flip/loading flags strictly on the main actor
+    let alreadyLoading: Bool = await MainActor.run {
+      if isLoading { return true }
+      if showSpinner { isLoading = true }
+      return false
+    }
     if alreadyLoading { return }
-    if showSpinner { await MainActor.run { isLoading = true } }
+    
+    // Ensure flags reset when we exit
     defer {
-      if showSpinner {
-        isLoading = false
-        isFirstLoad = false
+      Task { @MainActor in
+        if showSpinner {
+          isLoading = false
+          isFirstLoad = false
+        }
       }
     }
+    
     do {
-      let store = try OSLogStore(scope: .currentProcessIdentifier)
-      let predicate = NSPredicate(format: "subsystem IN %@", self.subsystems)
-      let newEntries = try store.getEntries(matching: predicate).compactMap { $0 as? OSLogEntryLog }
+      // Snapshot values we need for the background task
+      let subsystemsCopy = self.subsystems
+      let lastSeen = await MainActor.run { self.lastFetchTime }
       
-      self.logs = newEntries.map {
-        LogEntry(
-          date: $0.date,
-          category: $0.category,
-          message: $0.composedMessage,
-          subsystem: $0.subsystem,
-          processId: Int($0.processIdentifier),
-          threadId: $0.threadIdentifier,
-          library: $0.sender,
-          processName: $0.process,
-          level: LogLevel(rawLevel: $0.level.rawValue) ?? .info
-        )
-      }
-      self.lastFetchTime = .now
+      // Heavy work off the main actor
+      let (fetchedLogs, fetchedAt): ([LogEntry], Date) = try await Task.detached(priority: .utility) {
+        let store = try OSLogStore(scope: .currentProcessIdentifier)
+        let predicate = NSPredicate(format: "subsystem IN %@", subsystemsCopy)
+        
+        // On first load, scan broadly; on refresh, resume near last fetch for smaller work
+        let rawEntries: [OSLogEntryLog]
+        if showSpinner {
+          rawEntries = try store.getEntries(matching: predicate).compactMap { $0 as? OSLogEntryLog }
+        } else {
+          // Small overlap to avoid missing boundary entries
+          let pos = store.position(date: lastSeen.addingTimeInterval(-2))
+          rawEntries = try store.getEntries(at: pos, matching: predicate).compactMap { $0 as? OSLogEntryLog }
+        }
+        
+        let mapped = rawEntries.map {
+          LogEntry(
+            date: $0.date,
+            category: $0.category,
+            message: $0.composedMessage,
+            subsystem: $0.subsystem,
+            processId: Int($0.processIdentifier),
+            threadId: $0.threadIdentifier,
+            library: $0.sender,
+            processName: $0.process,
+            level: LogLevel(rawLevel: $0.level.rawValue) ?? .info
+          )
+        }
+        return (mapped, Date())
+      }.value
       
-      if showSpinner {
-        self.subtitleText = "\(self.logs.count) Logs"
-      } else {
-        self.subtitleText = "Updated Just Now"
-        subtitleUpdateTask?.cancel()
-        subtitleUpdateTask = Task { @MainActor in
-          try? await Task.sleep(for: .seconds(5))
-          guard !Task.isCancelled else { return }
-          self.subtitleText = "\(self.searchResults.count) Logs"
+      // Publish results back to the UI on the main actor
+      await MainActor.run {
+        self.logs = fetchedLogs
+        self.lastFetchTime = fetchedAt
+        
+        if showSpinner {
+          self.subtitleText = "\(self.logs.count) Logs"
+        } else {
+          self.subtitleText = "Updated Just Now"
+          subtitleUpdateTask?.cancel()
+          subtitleUpdateTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            self.subtitleText = "\(self.searchResults.count) Logs"
+          }
         }
       }
     } catch {
-      self.error = error
-      let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "View")
-      logger.error("Failed to fetch logs: \(error.localizedDescription)")
+      await MainActor.run {
+        self.error = error
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "View")
+        logger.error("Failed to fetch logs: \(error.localizedDescription)")
+      }
     }
   }
 }
