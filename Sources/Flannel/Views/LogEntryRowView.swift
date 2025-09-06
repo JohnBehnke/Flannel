@@ -8,59 +8,63 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Small, reusable style for metadata text
-private struct MetaStyle: ViewModifier {
-  func body(content: Content) -> some View {
-    content
-      .font(.caption2)
-      .bold()
-      .foregroundStyle(.tertiary)
-  }
-}
-
-private extension View {
-  func metaStyle() -> some View { modifier(MetaStyle()) }
-}
-
-/// Tiny badge for the log level / type symbol with a colored background
-private struct LevelBadge: View {
-  let symbol: String
-  let color: Color
-  
-  var body: some View {
-    Image(systemName: symbol)
-      .resizable()
-      .scaledToFit()
-      .frame(width: 8, height: 8)
-      .padding(3)
-      .font(.caption2)
-      .foregroundStyle(.white)
-      .background(color)
-      .clipShape(.rect(cornerRadius: 2))
-      .accessibilityHidden(true)
-  }
-}
-
-/// Generic metadata pill with an optional SF Symbol and a text value
-private struct MetaItem: View {
-  var systemName: String?
-  var text: String
-  
-  var body: some View {
-    HStack(spacing: 2) {
-      if let systemName { Image(systemName: systemName) }
-      Text(text)
-    }
-    .metaStyle()
-  }
-}
-
 struct LogEntryRowView: View {
   @Environment(\.colorScheme) private var colorScheme
   
-  let visibleMetadata: Set<FlannelLogMetadata>
-  let entry: FlannelLogEntry
+  let visibleMetadata: Set<Metadata>
+  let entry: LogEntry
   let showMetadata: Bool
+  
+  static let timeFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "HH:mm:ss.SSSS"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    return formatter
+  }()
+  
+  // MARK: - Nested UI helpers
+  // Small, reusable style for metadata text
+  private struct MetaStyle: ViewModifier {
+    func body(content: Content) -> some View {
+      content
+        .font(.caption2)
+        .bold()
+        .foregroundStyle(.tertiary)
+    }
+  }
+  
+  /// Tiny badge for the log level / type symbol with a colored background
+  private struct LevelBadge: View {
+    let symbol: String
+    let color: Color
+    
+    var body: some View {
+      Image(systemName: symbol)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 8, height: 8)
+        .padding(3)
+        .font(.caption2)
+        .foregroundStyle(.white)
+        .background(color)
+        .clipShape(.rect(cornerRadius: 2))
+        .accessibilityHidden(true)
+    }
+  }
+  
+  /// Generic metadata pill with an optional SF Symbol and a text value
+  private struct MetaItem: View {
+    var systemName: String?
+    var text: String
+    
+    var body: some View {
+      HStack(spacing: 2) {
+        if let systemName { Image(systemName: systemName) }
+        Text(text)
+      }
+      .modifier(MetaStyle())
+    }
+  }
   
   var body: some View {
     HStack(alignment: .top) {
@@ -78,10 +82,7 @@ struct LogEntryRowView: View {
     .listRowBackground(showMetadata ? entry.rowColor.opacity(0.2) : nil)
     .contextMenu { copyContextMenu }
   }
-}
-
-// MARK: - Subviews
-private extension LogEntryRowView {
+  
   @ViewBuilder
   var metadataRow: some View {
     HStack(alignment: .center, spacing: 8) {
@@ -104,15 +105,15 @@ private extension LogEntryRowView {
           }
           
           if visibleMetadata.contains(.pidtid) {
-           
-              MetaItem(
-                systemName: "tag",
-                text: "\(entry.processId.formatted(.number.grouping(.never))):0x\(String(entry.threadId, radix: 16))"
-              )
-            }
+            
+            MetaItem(
+              systemName: "tag",
+              text: "\(entry.processId.formatted(.number.grouping(.never))):0x\(String(entry.threadId, radix: 16))"
+            )
+          }
           
           if visibleMetadata.contains(.subsystem) {
-            MetaItem(systemName: "gearshape.2", text: entry.subsytem)
+            MetaItem(systemName: "gearshape.2", text: entry.subsystem)
           }
           
           if visibleMetadata.contains(.category) {
@@ -132,20 +133,10 @@ private extension LogEntryRowView {
   }
 }
 
-// MARK: - Formatters
-private extension LogEntryRowView {
-  static let timeFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm:ss.SSSS"
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    return formatter
-  }()
-}
-
 #Preview {
-  List(FlannelLogEntry.mockFlannelEntries) { entry in
+  List(LogEntry.mockFlannelEntries) { entry in
     LogEntryRowView(
-      visibleMetadata: Set(FlannelLogMetadata.allCases),
+      visibleMetadata: Set(Metadata.allCases),
       entry: entry,
       showMetadata: true
     )

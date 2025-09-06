@@ -1,13 +1,11 @@
 //
-//  FlannelLogMetadata.swift
-//  Flannel
+//  Metadata.swift
 //
 //  Created by John Behnke on 9/6/25.
 //
 
-/// Represents the available metadata fields for a Flannel log entry.
-/// Provides identifiers, display names, and optional system images.
-enum FlannelLogMetadata: String, CaseIterable, Identifiable {
+
+enum Metadata: String, CaseIterable, Identifiable {
   case timestamp = "Timestamp"
   case type = "Type"
   case library = "Library"
@@ -19,8 +17,7 @@ enum FlannelLogMetadata: String, CaseIterable, Identifiable {
   var id: String { rawValue }
 }
 
-extension FlannelLogMetadata {
-  /// An optional SF Symbol name that represents the metadata field.
+extension Metadata {
   var systemImage: String? {
     switch self {
       case .timestamp, .type:
